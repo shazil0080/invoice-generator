@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Invoice Generater</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&family=Noto+Serif:wght@700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#f1f5f9;font-family:'Noto Sans',sans-serif;font-size:14px;}
+
+/* NAV */
+.nav{background:#1e293b;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.nav-logo{display:flex;align-items:center;gap:10px;}
+.nav-icon{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,#f59e0b,#ef4444);display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;font-weight:900;}
+.nav-title{color:#f1f5f9;font-weight:700;font-size:15px;}
+.nav-btns{display:flex;gap:6px;flex-wrap:wrap;}
+.nav-btn{padding:7px 14px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:700;transition:.2s;}
+.btn-active{background:linear-gradient(135deg,#f59e0b,#ef4444);color:#000;}
+.btn-inactive{background:#334155;color:#94a3b8;}
+
+/* FORM */
+.form-wrap{max-width:700px;margin:0 auto;padding:16px 12px 40px;}
+.card{background:#fff;border-radius:10px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:14px;}
+.card-title{padding:10px 14px;background:#1e293b;color:#f1f5f9;font-weight:700;font-size:13px;}
+.card-body{padding:14px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;}
+.field label{display:block;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;}
+.field input,.field select,.field textarea{width:100%;border:1px solid #cbd5e1;border-radius:6px;padding:8px 10px;font-size:13px;font-family:inherit;color:#1e293b;background:#fff;outline:none;transition:.2s;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#f59e0b;}
+.items-table{width:100%;border-collapse:collapse;font-size:12px;}
+.items-table th{padding:8px 6px;background:#1e293b;color:#fff;font-size:10px;font-weight:700;text-align:left;white-space:nowrap;}
+.items-table td{padding:6px;border-bottom:1px solid #f1f5f9;vertical-align:middle;}
+.items-table td input,.items-table td select{width:100%;border:1px solid #e2e8f0;border-radius:4px;padding:5px 6px;font-size:11px;font-family:inherit;outline:none;}
+.add-btn{width:100%;margin-top:10px;padding:8px;border:1px dashed #94a3b8;border-radius:6px;background:transparent;color:#64748b;cursor:pointer;font-size:13px;}
+.submit-btn{width:100%;padding:14px;margin-top:8px;background:linear-gradient(135deg,#f59e0b,#ef4444);border:none;border-radius:10px;cursor:pointer;font-size:15px;font-weight:700;color:#000;}
+.remove-btn{background:none;border:none;cursor:pointer;color:#ef4444;font-size:18px;padding:0 4px;}
+
+/* ═══ INVOICE PREVIEW — matches PDF exactly ═══ */
+.preview-wrap{max-width:800px;margin:16px auto;padding:0 12px 120px;}
+
+/* Outer border — thick black border around entire invoice like PDF */
+.invoice{
+  background:#fff;
+  border:2px solid #000;
+  font-size:12px;
+  font-family:'Noto Sans',sans-serif;
+}
+
+/* Header: firm name + details, bordered bottom */
+.inv-header{
+  border-bottom:1px solid #000;
+  padding:10px 14px;
+  text-align:center;
+}
+.inv-firm{
+  font-family:'Noto Serif',serif;
+  font-size:19px;font-weight:700;color:#000;
+}
+.inv-sub{font-size:11px;color:#222;margin-top:2px;line-height:1.7;}
+
+/* TAX INVOICE title band */
+.inv-band{
+  border-bottom:1px solid #000;
+  text-align:center;
+  padding:4px;
+  font-weight:700;font-size:13px;letter-spacing:2px;
+  color:#000;background:#fff;
+}
+
+/* Two-column row: buyer left, invoice info right */
+.inv-two{
+  display:flex;
+  border-bottom:1px solid #000;
+}
+.inv-left{
+  flex:1.4;
+  border-right:1px solid #000;
+  padding:8px 10px;
+}
+.inv-right{
+  flex:1;
+  padding:8px 10px;
+}
+.inv-section-title{
+  font-weight:700;font-size:11px;color:#000;
+  border-bottom:1px solid #000;
+  padding-bottom:3px;margin-bottom:5px;
+}
+.kv{display:flex;gap:4px;margin-bottom:2px;font-size:10.5px;color:#000;}
+.kv-k{min-width:90px;flex-shrink:0;font-weight:600;}
+.kv-v{color:#111;}
+
+/* Delivery sub-section inside right col */
+.del-section{
+  border-top:1px solid #000;
+  margin-top:6px;padding-top:5px;
+}
+.del-title{font-weight:700;font-size:10px;color:#000;margin-bottom:3px;}
+
+/* Items table — all borders black like PDF */
+.inv-items{
+  width:100%;border-collapse:collapse;
+  font-size:11px;
+  border-bottom:1px solid #000;
+}
+.inv-items th{
+  padding:6px 8px;
+  background:#fff;
+  font-weight:700;font-size:10.5px;color:#000;
+  border:1px solid #000;
+  text-align:left;
+}
+.inv-items td{
+  padding:6px 8px;
+  border:1px solid #000;
+  color:#000;vertical-align:top;
+}
+.inv-items td.right{text-align:right;}
+.inv-items td.center{text-align:center;}
+
+/* GST summary table */
+.inv-gst{
+  width:100%;border-collapse:collapse;
+  font-size:10.5px;
+  border-bottom:1px solid #000;
+}
+.inv-gst th{
+  padding:5px 8px;
+  border:1px solid #000;
+  font-weight:700;font-size:10px;color:#000;
+  background:#fff;text-align:left;
+}
+.inv-gst td{
+  padding:5px 8px;
+  border:1px solid #000;
+  color:#000;
+}
+.inv-gst td.right{text-align:right;}
+.inv-gst tr.total-row td{font-weight:700;background:#f5f5f5;}
+
+/* CGST SGST subtotal row */
+.tax-sub-row{
+  display:flex;justify-content:flex-end;gap:40px;
+  padding:5px 12px;
+  border-bottom:1px solid #000;
+  font-size:11px;font-weight:600;color:#000;
+}
+
+/* Amount in words row */
+.amt-words-row{
+  border-bottom:1px solid #000;
+  padding:7px 10px;
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:11px;color:#000;
+}
+
+/* Tax amount in words */
+.tax-words-row{
+  border-bottom:1px solid #000;
+  padding:6px 10px;
+  font-size:10.5px;color:#000;
+}
+.tax-words-tbl{
+  width:100%;border-collapse:collapse;font-size:10.5px;
+  border-bottom:1px solid #000;
+}
+.tax-words-tbl td{
+  padding:5px 8px;border:1px solid #000;color:#000;
+}
+
+/* Total row */
+.total-row-bar{
+  display:flex;justify-content:space-between;
+  padding:5px 10px;
+  border-bottom:1px solid #000;
+  font-weight:700;font-size:12px;color:#000;
+  background:#f5f5f5;
+}
+
+/* E&OE */
+.eoe-row{
+  padding:3px 10px;border-bottom:1px solid #000;
+  font-size:10px;color:#555;font-style:italic;
+}
+
+/* Bottom 3-column section */
+.inv-bottom{
+  display:flex;border-bottom:1px solid #000;min-height:80px;
+}
+.inv-bottom-decl{flex:1.8;border-right:1px solid #000;padding:8px 10px;font-size:10.5px;color:#000;}
+.inv-bottom-bank{flex:1.3;border-right:1px solid #000;padding:8px 10px;font-size:10.5px;color:#000;}
+.inv-bottom-sign{flex:1;padding:8px 10px;font-size:10.5px;color:#000;display:flex;flex-direction:column;justify-content:space-between;}
+
+.bottom-sec-title{font-weight:700;font-size:11px;margin-bottom:5px;color:#000;border-bottom:1px solid #000;padding-bottom:3px;}
+.sign-line{border-top:1px solid #000;margin-top:36px;padding-top:4px;text-align:center;font-size:10px;}
+.sign-line2{border-top:1px solid #000;margin-top:14px;padding-top:4px;text-align:center;font-size:10px;}
+
+/* Footer */
+.inv-footer{background:#1e293b;color:#94a3b8;font-size:10px;text-align:center;padding:5px;}
+
+/* Floating download button */
+.fab{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;
+  background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;
+  border:none;border-radius:50px;padding:15px 32px;font-size:15px;font-weight:700;
+  cursor:pointer;box-shadow:0 6px 24px rgba(34,197,94,.5);display:none;white-space:nowrap;}
+
+@media(max-width:500px){
+  .grid2{grid-template-columns:1fr;}
+  .nav-title{font-size:13px;}
+  .inv-two{flex-direction:column;}
+  .inv-left{border-right:none;border-bottom:1px solid #000;}
+  .inv-bottom{flex-direction:column;}
+  .inv-bottom-decl,.inv-bottom-bank{border-right:none;border-bottom:1px solid #000;}
+}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="nav-logo">
+    <div class="nav-icon">&#8377;</div>
+    <span class="nav-title">Invoice Generater</span>
+  </div>
+  <div class="nav-btns">
+    <button class="nav-btn btn-active" id="btnEdit" onclick="showTab('form')">&#9999;&#65039; Edit</button>
+    <button class="nav-btn btn-inactive" id="btnPreview" onclick="showTab('preview')">&#128065; Preview</button>
+  </div>
+</div>
+
+<!-- FORM TAB -->
+<div id="formTab" class="form-wrap">
+
+  <div class="card">
+    <div class="card-title">&#127978; Seller Details</div>
+    <div class="card-body"><div class="grid2">
+      <div class="field"><label>Firm Name</label><input id="sellerName" value="SK ELECTRONICS &amp; ELECTRICALS"/></div>
+      <div class="field"><label>GSTIN</label><input id="sellerGSTIN" value="09DZPPK1751K1ZT"/></div>
+      <div class="field"><label>Phone</label><input id="sellerPhone" value="8923032002, 8534069677"/></div>
+      <div class="field"><label>Email</label><input id="sellerEmail" value="Technicalproblem786@gmail.com"/></div>
+      <div class="field"><label>Address</label><input id="sellerAddress" value="Near Saleem Ki Puliya Fakira Market Jamalpur"/></div>
+      <div class="field"><label>City</label><input id="sellerCity" value="Aligarh"/></div>
+    </div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">&#129999; Invoice Details</div>
+    <div class="card-body"><div class="grid2">
+      <div class="field"><label>Invoice No</label><input id="invoiceNo" value="76"/></div>
+      <div class="field"><label>Invoice Date</label><input type="date" id="invoiceDate" value="2025-10-14"/></div>
+    </div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">&#128100; Buyer / Bill To</div>
+    <div class="card-body"><div class="grid2">
+      <div class="field"><label>Name</label><input id="buyerName" value="MOHD AZAZ"/></div>
+      <div class="field"><label>Phone</label><input id="buyerPhone" value="9258385330"/></div>
+      <div class="field"><label>Address</label><input id="buyerAddress" value="Bhawan no.24 Near Madina Masjid Hamdard Nagar B"/></div>
+      <div class="field"><label>State</label><input id="buyerState" value="Uttar Pradesh"/></div>
+      <div class="field"><label>City</label><input id="buyerCity" value="Aligarh"/></div>
+      <div class="field"><label>State Code</label><input id="buyerCode" value="09"/></div>
+      <div class="field"><label>Delivery Note</label><input id="deliveryNote" value=""/></div>
+      <div class="field"><label>Delivery Date</label><input type="date" id="deliveryDate" value=""/></div>
+      <div class="field"><label>Document No</label><input id="documentNo" value=""/></div>
+      <div class="field"><label>Destination</label><input id="destination" value=""/></div>
+      <div class="field"><label>Despatch Through</label><input id="despatch" value=""/></div>
+    </div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">&#128230; Line Items</div>
+    <div class="card-body" style="overflow-x:auto;">
+      <table class="items-table">
+        <thead><tr>
+          <th>#</th><th style="min-width:100px">Serial No.</th><th style="min-width:160px">Description</th><th>HSN/SAC</th>
+          <th>Qty</th><th>Rate</th><th>Dis%</th>
+          <th>CGST%</th><th>SGST%</th><th>Total</th><th></th>
+        </tr></thead>
+        <tbody id="itemsBody"></tbody>
+      </table>
+      <button class="add-btn" onclick="addItem()">+ Add Item</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">&#127974; Bank Details</div>
+    <div class="card-body"><div class="grid2">
+      <div class="field"><label>Account Holder</label><input id="bankHolder" value="SAHZAD KHAN"/></div>
+      <div class="field"><label>Account No</label><input id="accountNo" value="50200103255952"/></div>
+      <div class="field"><label>IFSC Code</label><input id="ifsc" value="HDFC0003764"/></div>
+      <div class="field"><label>UPI No</label><input id="upi" value="8923032002"/></div>
+    </div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">&#128203; Declaration</div>
+    <div class="card-body">
+      <div class="field"><textarea id="declaration" rows="4">In case of sales
+WARRANTY WILL BE ENTERTAINED WITH WARRANTY CARD (IF APPLICABLE) ONLY. WARRANTY WILL BE COVERED AS PER MANUFACTURER'S POLICY. WARRANTY IS SOLE RESPONSIBILITY OF MANUFACTURER AND WE ARE NOT LIABLE FOR ANY CLAIMS</textarea></div>
+    </div>
+  </div>
+
+  <button class="submit-btn" onclick="showTab('preview')">Preview Invoice &#8594;</button>
+</div>
+
+<!-- PREVIEW TAB -->
+<div id="previewTab" style="display:none">
+  <div class="preview-wrap">
+    <div class="invoice" id="invoicePreview"></div>
+  </div>
+</div>
+
+<!-- Floating Download Button -->
+<button class="fab" id="fabBtn" onclick="downloadPDF()">&#11015;&#65039; Download Invoice PDF</button>
+
+<script>
+const { jsPDF } = window.jspdf;
+let items = [{id:1,serialNo:"",description:"VOLTBEK REF - RDC208E1/D0BSE0M0000GD1100998A25E077711",hsn:"84181090",qty:1,rate:11864.41,dis:0,cgst:9,sgst:9}];
+let nextId = 2;
+
+function fmt(n){return Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+function numWords(n){
+  const ones=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
+  const tens=["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
+  const conv=(x)=>{
+    if(x===0)return"";if(x<20)return ones[x]+" ";
+    if(x<100)return tens[Math.floor(x/10)]+" "+ones[x%10]+" ";
+    if(x<1000)return ones[Math.floor(x/100)]+" Hundred "+conv(x%100);
+    if(x<100000)return conv(Math.floor(x/1000))+"Thousand "+conv(x%1000);
+    if(x<10000000)return conv(Math.floor(x/100000))+"Lakh "+conv(x%100000);
+    return conv(Math.floor(x/10000000))+"Crore "+conv(x%10000000);
+  };
+  return(conv(Math.round(n)).trim()||"Zero")+" Only /-";
+}
+
+function calcItem(it){
+  const taxable=it.qty*it.rate*(1-it.dis/100);
+  const cgst=taxable*it.cgst/100;
+  const sgst=taxable*it.sgst/100;
+  return{taxable,cgst,sgst,total:taxable+cgst+sgst};
+}
+function g(id){return document.getElementById(id);}
+function gv(id){return(g(id)||{}).value||"";}
+
+function renderItems(){
+  g('itemsBody').innerHTML=items.map((it,i)=>`
+    <tr>
+      <td style="color:#64748b;text-align:center">${i+1}</td>
+      <td><input value="${(it.serialNo||'').replace(/"/g,'&quot;')}" oninput="updateItem(${it.id},'serialNo',this.value)" style="min-width:90px" placeholder="e.g. SN-001"/></td>
+      <td><input value="${it.description.replace(/"/g,'&quot;')}" oninput="updateItem(${it.id},'description',this.value)" style="min-width:150px"/></td>
+      <td><input value="${it.hsn}" oninput="updateItem(${it.id},'hsn',this.value)" style="width:78px"/></td>
+      <td><input type="number" value="${it.qty}" oninput="updateItem(${it.id},'qty',+this.value)" style="width:48px"/></td>
+      <td><input type="number" value="${it.rate}" oninput="updateItem(${it.id},'rate',+this.value)" style="width:78px"/></td>
+      <td><input type="number" value="${it.dis}" oninput="updateItem(${it.id},'dis',+this.value)" style="width:42px"/></td>
+      <td><input type="number" value="${it.cgst}" min="0" max="100" step="0.5" oninput="updateItem(${it.id},'cgst',+this.value)" style="width:52px" title="Enter CGST %"/></td>
+      <td><input type="number" value="${it.sgst}" min="0" max="100" step="0.5" oninput="updateItem(${it.id},'sgst',+this.value)" style="width:52px" title="Enter SGST %"/></td>
+      <td style="font-weight:700;text-align:right;white-space:nowrap">&#8377;${fmt(calcItem(it).total)}</td>
+      <td><button class="remove-btn" onclick="removeItem(${it.id})">&#215;</button></td>
+    </tr>`).join('');
+}
+
+function addItem(){items.push({id:nextId++,serialNo:"",description:"",hsn:"",qty:1,rate:0,dis:0,cgst:9,sgst:9});renderItems();}
+function removeItem(id){if(items.length===1){alert("At least one item required.");return;}items=items.filter(i=>i.id!==id);renderItems();}
+function updateItem(id,field,val){items=items.map(i=>i.id===id?{...i,[field]:val}:i);}
+
+function showTab(tab){
+  if(tab==='preview'){
+    buildPreview();
+    g('formTab').style.display='none';
+    g('previewTab').style.display='block';
+    g('btnEdit').className='nav-btn btn-inactive';
+    g('btnPreview').className='nav-btn btn-active';
+    g('fabBtn').style.display='block';
+  } else {
+    g('formTab').style.display='block';
+    g('previewTab').style.display='none';
+    g('btnEdit').className='nav-btn btn-active';
+    g('btnPreview').className='nav-btn btn-inactive';
+    g('fabBtn').style.display='none';
+  }
+  window.scrollTo(0,0);
+}
+
+function buildPreview(){
+  const sel={name:gv('sellerName'),gstin:gv('sellerGSTIN'),phone:gv('sellerPhone'),email:gv('sellerEmail'),address:gv('sellerAddress'),city:gv('sellerCity')};
+  const buy={name:gv('buyerName'),phone:gv('buyerPhone'),address:gv('buyerAddress'),state:gv('buyerState'),city:gv('buyerCity'),code:gv('buyerCode')};
+  const inv={no:gv('invoiceNo'),date:gv('invoiceDate')};
+  const del={note:gv('deliveryNote'),date:gv('deliveryDate'),doc:gv('documentNo'),dest:gv('destination'),desp:gv('despatch')};
+  const bank={holder:gv('bankHolder'),acc:gv('accountNo'),ifsc:gv('ifsc'),upi:gv('upi')};
+  const decl=gv('declaration');
+  const tT=items.reduce((s,i)=>s+calcItem(i).taxable,0);
+  const tC=items.reduce((s,i)=>s+calcItem(i).cgst,0);
+  const tS=items.reduce((s,i)=>s+calcItem(i).sgst,0);
+  const grand=tT+tC+tS;
+
+  const kv=(k,v)=>`<div class="kv"><span class="kv-k">${k}:</span><span class="kv-v">${v||''}</span></div>`;
+
+  // Items rows
+  const iRows=items.map((it,i)=>{
+    const c=calcItem(it);
+    return `<tr>
+      <td class="center">${i+1}</td>
+      <td>${it.description}${it.serialNo?`<br/><span style="font-size:9.5px;color:#555">S/N: ${it.serialNo}</span>`:''}<br/><span style="font-size:9.5px;color:#444">CGST:${it.cgst}% &nbsp;|&nbsp; SGST:${it.sgst}%</span></td>
+      <td>${it.hsn}</td>
+      <td class="center">${it.qty}</td>
+      <td class="right">${fmt(it.rate)}</td>
+      <td class="center">${it.dis}.00</td>
+      <td class="right" style="font-weight:700">${fmt(c.taxable)}</td>
+    </tr>`;
+  }).join('');
+
+  // GST rows
+  const gRows=items.map(it=>{
+    const c=calcItem(it);
+    return `<tr>
+      <td>${fmt(c.taxable)}</td>
+      <td class="center">${it.cgst}%</td>
+      <td class="right">${fmt(c.cgst)}</td>
+      <td class="center">${it.sgst}%</td>
+      <td class="right">${fmt(c.sgst)}</td>
+      <td class="right" style="font-weight:700">${fmt(c.cgst+c.sgst)}</td>
+    </tr>`;
+  }).join('');
+
+  g('invoicePreview').innerHTML=`
+
+    <!-- ── HEADER ── -->
+    <div class="inv-header">
+      <div class="inv-firm">${sel.name}</div>
+      <div class="inv-sub">
+        Phone No. ${sel.phone}<br/>
+        Address: ${sel.address}<br/>
+        City: ${sel.city}<br/>
+        Email: ${sel.email}<br/>
+        <strong>GSTIN: ${sel.gstin}</strong>
+      </div>
+    </div>
+
+    <!-- ── TAX INVOICE BAND ── -->
+    <div class="inv-band">Tax Invoice</div>
+
+    <!-- ── BUYER + INVOICE INFO (2 cols) ── -->
+    <div class="inv-two">
+      <div class="inv-left">
+        <div class="inv-section-title">Bill To (Buyer)</div>
+        ${kv('Name',buy.name)}
+        ${kv('Phone',buy.phone)}
+        ${kv('Address',buy.address)}
+        ${kv('State',buy.state)}
+        ${kv('City',buy.city)}
+      </div>
+      <div class="inv-right">
+        ${kv('Invoice no.',inv.no)}
+        ${kv('Invoice Date',inv.date)}
+        <div class="del-section">
+          <div class="del-title">Delivery details</div>
+          ${kv('Code',buy.code)}
+          ${kv('Delivery note',del.note)}
+          ${kv('Delivery date',del.date)}
+          ${kv('Document no',del.doc)}
+          ${kv('Destination',del.dest)}
+          ${kv('Despatch through',del.desp)}
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ITEMS TABLE ── -->
+    <table class="inv-items">
+      <thead>
+        <tr>
+          <th style="width:28px">S NO.</th>
+          <th>Description of Goods</th>
+          <th style="width:70px">HSN/SAC</th>
+          <th style="width:36px;text-align:center">Qty</th>
+          <th style="width:72px;text-align:right">Rate</th>
+          <th style="width:42px;text-align:center">Dis%</th>
+          <th style="width:80px;text-align:right">Amount</th>
+        </tr>
+      </thead>
+      <tbody>${iRows}</tbody>
+    </table>
+
+    <!-- ── GST SUMMARY TABLE ── -->
+    <table class="inv-gst">
+      <thead>
+        <tr>
+          <th>Taxable Value</th>
+          <th style="text-align:center">Rate</th>
+          <th style="text-align:right">CGST Amount</th>
+          <th style="text-align:center">Rate</th>
+          <th style="text-align:right">SGST Amount</th>
+          <th style="text-align:right">Tax Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${gRows}
+        <tr class="total-row">
+          <td style="font-weight:700">TOTAL</td>
+          <td></td>
+          <td class="right" style="font-weight:700">${fmt(tC)}</td>
+          <td></td>
+          <td class="right" style="font-weight:700">${fmt(tS)}</td>
+          <td class="right" style="font-weight:700">${fmt(tC+tS)}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ── CGST / SGST SUBTOTALS ── -->
+    <div class="tax-sub-row">
+      <span>SGST &nbsp; ${fmt(tS)}</span>
+      <span>CGST &nbsp; ${fmt(tC)}</span>
+    </div>
+
+    <!-- ── AMOUNT IN WORDS ── -->
+    <div class="amt-words-row">
+      <div><strong>Amount chargeable (in word):</strong> ${numWords(Math.round(grand))}</div>
+      <div style="font-weight:800;font-size:14px">&#8377; ${fmt(grand)}</div>
+    </div>
+
+    <!-- ── TAX AMOUNT IN WORDS TABLE ── -->
+    <table class="tax-words-tbl">
+      <tr>
+        <td colspan="4"><strong>Tax Amount (in words) CGST &nbsp;&nbsp; SGST/UTGST</strong><br/>${numWords(Math.round(tC+tS))}</td>
+      </tr>
+      <tr>
+        <td style="font-weight:700">Taxable Value</td>
+        <td style="font-weight:700;text-align:center">CGST Rate</td>
+        <td style="font-weight:700;text-align:center">SGST Rate</td>
+        <td style="font-weight:700;text-align:right">Total Tax</td>
+      </tr>
+      <tr>
+        <td>${fmt(tT)}</td>
+        <td style="text-align:center">${items[0]?.cgst}% = &#8377;${fmt(tC)}</td>
+        <td style="text-align:center">${items[0]?.sgst}% = &#8377;${fmt(tS)}</td>
+        <td style="text-align:right;font-weight:700">&#8377;${fmt(tC+tS)}</td>
+      </tr>
+    </table>
+
+    <!-- ── GRAND TOTAL ── -->
+    <div class="total-row-bar">
+      <span>TOTAL</span>
+      <span>&#8377; ${fmt(grand)}</span>
+    </div>
+
+    <!-- ── E&OE ── -->
+    <div class="eoe-row">E. &amp; O.E</div>
+
+    <!-- ── BOTTOM 3-COL: Declaration | Bank | Signature ── -->
+    <div class="inv-bottom">
+      <div class="inv-bottom-decl">
+        <div class="bottom-sec-title">Declaration</div>
+        <div style="line-height:1.6;white-space:pre-wrap">${decl}</div>
+      </div>
+      <div class="inv-bottom-bank">
+        <div class="bottom-sec-title">BANK ACCOUNT DETAILS</div>
+        <div style="line-height:1.9">
+          Account Holder Name: <strong>${bank.holder}</strong><br/>
+          Account No:- <strong>${bank.acc}</strong><br/>
+          IFSC CODE: <strong>${bank.ifsc}</strong><br/>
+          UPI No:- <strong>${bank.upi}</strong>
+        </div>
+      </div>
+      <div class="inv-bottom-sign">
+        <div style="font-weight:700">FIRM: ${sel.name}</div>
+        <div>
+          <div class="sign-line">Customer seal and Signature</div>
+          <div class="sign-line2">for ${sel.name}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── FOOTER ── -->
+    <div class="inv-footer">Generated by Invoice Generater &nbsp;|&nbsp; Computer-generated invoice</div>
+  `;
+}
+
+/* ═══════════════════════════════════════════
+   PDF DOWNLOAD — borders match PDF exactly
+═══════════════════════════════════════════ */
+function downloadPDF(){
+  const btn=g('fabBtn');
+  btn.textContent='Generating PDF...';btn.disabled=true;
+  setTimeout(()=>{
+    try{
+      const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+      const PW=210, M=8; // page width, margin
+      const IW=PW-2*M;  // invoice width
+      let y=M;
+      const BLK=[0,0,0];       // black
+      const WHT=[255,255,255];  // white
+      const LGT=[245,245,245];  // light grey for total rows
+
+      const sel={name:gv('sellerName'),gstin:gv('sellerGSTIN'),phone:gv('sellerPhone'),email:gv('sellerEmail'),address:gv('sellerAddress'),city:gv('sellerCity')};
+      const buy={name:gv('buyerName'),phone:gv('buyerPhone'),address:gv('buyerAddress'),state:gv('buyerState'),city:gv('buyerCity'),code:gv('buyerCode')};
+      const inv={no:gv('invoiceNo'),date:gv('invoiceDate')};
+      const del={note:gv('deliveryNote'),date:gv('deliveryDate'),doc:gv('documentNo'),dest:gv('destination'),desp:gv('despatch')};
+      const bank={holder:gv('bankHolder'),acc:gv('accountNo'),ifsc:gv('ifsc'),upi:gv('upi')};
+      const decl=gv('declaration');
+      const tT=items.reduce((s,i)=>s+calcItem(i).taxable,0);
+      const tC=items.reduce((s,i)=>s+calcItem(i).cgst,0);
+      const tS=items.reduce((s,i)=>s+calcItem(i).sgst,0);
+      const grand=tT+tC+tS;
+
+      // Draw outer border around entire invoice
+      doc.setDrawColor(...BLK);doc.setLineWidth(0.5);
+
+      // ── HEADER ──
+      const hH=32;
+      doc.setFillColor(...WHT);doc.rect(M,y,IW,hH,'FD');
+      doc.setTextColor(...BLK);doc.setFontSize(15);doc.setFont('helvetica','bold');
+      doc.text(sel.name,PW/2,y+7,{align:'center'});
+      doc.setFontSize(8);doc.setFont('helvetica','normal');
+      doc.text('Phone No. '+sel.phone,PW/2,y+13,{align:'center'});
+      doc.text('Address: '+sel.address,PW/2,y+18,{align:'center'});
+      doc.text('City: '+sel.city+'    Email: '+sel.email,PW/2,y+23,{align:'center'});
+      doc.setFont('helvetica','bold');
+      doc.text('GSTIN: '+sel.gstin,PW/2,y+28,{align:'center'});
+      y+=hH;
+
+      // ── TAX INVOICE BAND ──
+      const bH=8;
+      doc.setFillColor(...WHT);doc.rect(M,y,IW,bH,'FD');
+      doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...BLK);
+      doc.text('Tax Invoice',PW/2,y+5.5,{align:'center'});
+      y+=bH;
+
+      // ── BUYER + INVOICE 2-COL ──
+      const twoH=46;
+      const leftW=IW*0.55, rightW=IW*0.45;
+      doc.setFillColor(...WHT);
+      doc.rect(M,y,leftW,twoH,'FD');
+      doc.rect(M+leftW,y,rightW,twoH,'FD');
+      // Bill To heading
+      doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...BLK);
+      doc.text('Bill To (Buyer)',M+3,y+5);
+      doc.line(M,y+7,M+leftW,y+7); // underline heading
+      doc.setFont('helvetica','normal');doc.setFontSize(8);
+      const buyLines=[['Name',buy.name],['Phone',buy.phone],['Address',buy.address],['State',buy.state],['City',buy.city]];
+      buyLines.forEach(([k,v],i)=>{
+        doc.setFont('helvetica','bold');doc.text(k+':',M+3,y+13+i*6);
+        doc.setFont('helvetica','normal');doc.text(v||'',M+22,y+13+i*6,{maxWidth:leftW-26});
+      });
+      // Right col
+      doc.setFont('helvetica','bold');doc.setFontSize(8);
+      doc.text('Invoice no.: ',M+leftW+3,y+6);
+      doc.setFont('helvetica','normal');doc.text(inv.no,M+leftW+30,y+6);
+      doc.setFont('helvetica','bold');doc.text('Invoice Date: ',M+leftW+3,y+12);
+      doc.setFont('helvetica','normal');doc.text(inv.date,M+leftW+33,y+12);
+      doc.line(M+leftW,y+15,M+IW,y+15);
+      doc.setFont('helvetica','bold');doc.text('Delivery details',M+leftW+3,y+20);
+      doc.line(M+leftW,y+22,M+IW,y+22);
+      const delLines=[['Code',buy.code],['Delivery note',del.note],['Document no',del.doc],['Destination',del.dest]];
+      delLines.forEach(([k,v],i)=>{
+        doc.setFont('helvetica','bold');doc.text(k+':',M+leftW+3,y+27+i*5);
+        doc.setFont('helvetica','normal');doc.text(v||'',M+leftW+30,y+27+i*5,{maxWidth:rightW-33});
+      });
+      y+=twoH;
+
+      // ── ITEMS TABLE ──
+      doc.autoTable({
+        startY:y, margin:{left:M,right:M},
+        head:[['S NO.','Description of Goods','HSN/SAC','Qty','Rate','Dis%','Amount']],
+        body:items.map((it,i)=>{
+          const c=calcItem(it);
+          const descLine=(it.serialNo?'S/N: '+it.serialNo+'\n':'')+it.description+'\nCGST:'+it.cgst+'%  SGST:'+it.sgst+'%';
+          return[
+            i+1,
+            descLine,
+            it.hsn,
+            it.qty,
+            fmt(it.rate),
+            it.dis+'%',
+            fmt(c.taxable)
+          ];
+        }),
+        headStyles:{fillColor:WHT,textColor:BLK,fontStyle:'bold',fontSize:8,lineWidth:0.3,lineColor:BLK},
+        bodyStyles:{fillColor:WHT,textColor:BLK,fontSize:8,lineWidth:0.3,lineColor:BLK},
+        columnStyles:{
+          0:{cellWidth:12,halign:'center'},
+          2:{cellWidth:18},
+          3:{cellWidth:10,halign:'center'},
+          4:{cellWidth:22,halign:'right'},
+          5:{cellWidth:12,halign:'center'},
+          6:{cellWidth:24,halign:'right',fontStyle:'bold'}
+        },
+        theme:'grid',
+        tableLineColor:BLK,tableLineWidth:0.3,
+      });
+      y=doc.lastAutoTable.finalY;
+
+      // ── GST SUMMARY TABLE ──
+      doc.autoTable({
+        startY:y, margin:{left:M,right:M},
+        head:[['Taxable Value','Rate','CGST Amount','Rate','SGST Amount','Tax Amount']],
+        body:[
+          ...items.map(it=>{
+            const c=calcItem(it);
+            return[fmt(c.taxable),it.cgst+'%',fmt(c.cgst),it.sgst+'%',fmt(c.sgst),fmt(c.cgst+c.sgst)];
+          }),
+          ['TOTAL','',fmt(tC),'',fmt(tS),fmt(tC+tS)]
+        ],
+        headStyles:{fillColor:WHT,textColor:BLK,fontStyle:'bold',fontSize:8,lineWidth:0.3,lineColor:BLK},
+        bodyStyles:{fillColor:WHT,textColor:BLK,fontSize:8,lineWidth:0.3,lineColor:BLK},
+        columnStyles:{
+          1:{halign:'center'},2:{halign:'right'},
+          3:{halign:'center'},4:{halign:'right'},5:{halign:'right',fontStyle:'bold'}
+        },
+        didParseCell:(d)=>{
+          if(d.row.index===items.length && d.section==='body'){
+            d.cell.styles.fillColor=LGT;d.cell.styles.fontStyle='bold';
+          }
+        },
+        theme:'grid',
+        tableLineColor:BLK,tableLineWidth:0.3,
+      });
+      y=doc.lastAutoTable.finalY;
+
+      // ── SGST CGST ROW ──
+      const srH=8;
+      doc.setFillColor(...WHT);doc.setDrawColor(...BLK);doc.rect(M,y,IW,srH,'FD');
+      doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(...BLK);
+      doc.text('SGST  '+fmt(tS),PW/2-20,y+5.5);
+      doc.text('CGST  '+fmt(tC),PW/2+20,y+5.5);
+      y+=srH;
+
+      // ── AMOUNT IN WORDS ──
+      const awH=9;
+      doc.setFillColor(...WHT);doc.rect(M,y,IW,awH,'FD');
+      doc.setFont('helvetica','bold');doc.setFontSize(8);
+      doc.text('Amount chargeable (in word):',M+3,y+4);
+      doc.setFont('helvetica','normal');
+      doc.text(numWords(Math.round(grand)),M+60,y+4,{maxWidth:IW-100});
+      doc.setFont('helvetica','bold');doc.setFontSize(10);
+      doc.text('Rs. '+fmt(grand),M+IW-3,y+7,{align:'right'});
+      y+=awH;
+
+      // ── TAX AMOUNT IN WORDS TABLE ──
+      doc.autoTable({
+        startY:y, margin:{left:M,right:M},
+        body:[
+          [{content:'Tax Amount (in words) CGST  SGST/UTGST\n'+numWords(Math.round(tC+tS)),colSpan:4,styles:{fontStyle:'bold',fontSize:8}}],
+          ['Taxable Value','CGST Rate','SGST Rate','Total Tax'],
+          [fmt(tT), items[0]?.cgst+'% = Rs.'+fmt(tC), items[0]?.sgst+'% = Rs.'+fmt(tS), 'Rs.'+fmt(tC+tS)],
+        ],
+        bodyStyles:{fillColor:WHT,textColor:BLK,fontSize:8,lineWidth:0.3,lineColor:BLK},
+        didParseCell:(d)=>{
+          if(d.row.index===1){d.cell.styles.fontStyle='bold';d.cell.styles.fillColor=LGT;}
+        },
+        theme:'grid',tableLineColor:BLK,tableLineWidth:0.3,
+      });
+      y=doc.lastAutoTable.finalY;
+
+      // ── GRAND TOTAL ROW ──
+      const gtH=9;
+      doc.setFillColor(...LGT);doc.rect(M,y,IW,gtH,'FD');
+      doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...BLK);
+      doc.text('TOTAL',M+3,y+6);
+      doc.text('Rs. '+fmt(grand),M+IW-3,y+6,{align:'right'});
+      y+=gtH;
+
+      // ── E&OE ──
+      const eoH=6;
+      doc.setFillColor(...WHT);doc.rect(M,y,IW,eoH,'FD');
+      doc.setFont('helvetica','italic');doc.setFontSize(7);doc.setTextColor(120,120,120);
+      doc.text('E. & O.E',M+3,y+4);
+      y+=eoH;
+
+      // ── BOTTOM 3-COL ──
+      const fH=50;
+      const c1=IW*0.42, c2=IW*0.33, c3=IW-c1-c2;
+      doc.setFillColor(...WHT);doc.setTextColor(...BLK);
+      doc.rect(M,y,c1,fH,'FD');
+      doc.rect(M+c1,y,c2,fH,'FD');
+      doc.rect(M+c1+c2,y,c3,fH,'FD');
+      // Declaration
+      doc.setFont('helvetica','bold');doc.setFontSize(8);
+      doc.text('Declaration',M+3,y+5);
+      doc.line(M,y+7,M+c1,y+7);
+      doc.setFont('helvetica','normal');doc.setFontSize(7);
+      doc.text(doc.splitTextToSize(decl,c1-5),M+3,y+11);
+      // Bank
+      doc.setFont('helvetica','bold');doc.setFontSize(8);
+      doc.text('BANK ACCOUNT DETAILS',M+c1+3,y+5);
+      doc.line(M+c1,y+7,M+c1+c2,y+7);
+      doc.setFont('helvetica','normal');doc.setFontSize(7.5);
+      doc.text('Account Holder: '+bank.holder,M+c1+3,y+12,{maxWidth:c2-5});
+      doc.text('Account No: '+bank.acc,M+c1+3,y+18,{maxWidth:c2-5});
+      doc.text('IFSC CODE: '+bank.ifsc,M+c1+3,y+24,{maxWidth:c2-5});
+      doc.text('UPI No: '+bank.upi,M+c1+3,y+30,{maxWidth:c2-5});
+      // Signature
+      const x3=M+c1+c2;
+      doc.setFont('helvetica','bold');doc.setFontSize(7.5);
+      doc.text('FIRM:',x3+3,y+5);
+      doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(sel.name,c3-5),x3+3,y+10);
+      doc.line(x3+3,y+fH-14,x3+c3-3,y+fH-14);
+      doc.text('Customer seal and Signature',x3+3,y+fH-9,{maxWidth:c3-5});
+      doc.line(x3+3,y+fH-5,x3+c3-3,y+fH-5);
+      doc.setFont('helvetica','italic');
+      doc.text('for '+sel.name,x3+3,y+fH-1,{maxWidth:c3-5});
+      y+=fH;
+
+      // ── FOOTER ──
+      doc.setFillColor(30,41,59);doc.rect(M,y,IW,7,'F');
+      doc.setTextColor(180,180,180);doc.setFontSize(7);doc.setFont('helvetica','normal');
+      doc.text('Generated by Invoice Generater | Computer-generated invoice',PW/2,y+4.5,{align:'center'});
+
+      // Save
+      const fname='Invoice_'+gv('invoiceNo')+'_'+gv('buyerName').replace(/\s+/g,'_')+'.pdf';
+      doc.save(fname);
+    }catch(err){alert('Error generating PDF: '+err.message);console.error(err);}
+    btn.innerHTML='&#11015;&#65039; Download Invoice PDF';btn.disabled=false;
+  },150);
+}
+
+renderItems();
+</script>
+</body>
+</html>
